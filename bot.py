@@ -34,13 +34,13 @@ def download_generic_file(url):
     response = requests.get(url, stream=True, timeout=60)
     response.raise_for_status()
     content_type = response.headers.get("content-type", "")
-    
+
     suffix = ".mp4"
     if "audio" in content_type:
         suffix = ".mp3"
     elif "image" in content_type:
         suffix = ".jpg"
-        
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
     for chunk in response.iter_content(chunk_size=8192):
         tmp.write(chunk)
@@ -50,25 +50,31 @@ def download_generic_file(url):
 async def process_with_ytdlp(url, message):
     """Processa links pesados usando yt-dlp"""
     logger.info(f"[yt-dlp] Processando: {url}")
-ydl_opts = {
-            'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
-            # Procura o melhor vídeo até 720p e junta com o melhor áudio
-            'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best', 
-            # Força o formato final a ser MP4 para rodar em qualquer celular
-            'merge_output_format': 'mp4',
-            'max_filesize': 50 * 1024 * 1024, 
-            'noplaylist': True,
-            'quiet': True,
-            'no_warnings': True,
-            'cookiefile': 'cookies.txt'
-        }
+
+    ydl_opts = {
+        'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
+        # Procura o melhor vídeo até 720p e junta com o melhor áudio
+        'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+        # Força o formato final a ser MP4 para rodar em qualquer celular
+        'merge_output_format': 'mp4',
+        'max_filesize': 50 * 1024 * 1024,
+        'noplaylist': True,
+        'quiet': True,
+        'no_warnings': True,
+        'cookiefile': 'cookies.txt'
+    }
+
     if "soundcloud" in url.lower():
         ydl_opts['format'] = 'bestaudio/best'
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        filename = info['requested_downloads'][0]['filepath'] if 'requested_downloads' in info else ydl.prepare_filename(info)
-        
+        filename = (
+            info['requested_downloads'][0]['filepath']
+            if 'requested_downloads' in info
+            else ydl.prepare_filename(info)
+        )
+
     with open(filename, "rb") as f:
         ext = filename.lower().split('.')[-1]
         if ext in ['mp3', 'm4a', 'wav', 'ogg']:
@@ -90,7 +96,7 @@ async def process_with_cobalt(url, message):
     )
     data = response.json()
     status = data.get("status")
-    
+
     if status == "error":
         raise Exception(f"Cobalt error: {data.get('text')}")
 
@@ -105,7 +111,7 @@ async def process_with_cobalt(url, message):
             else:
                 await message.reply_video(video=f)
         os.unlink(path)
-        
+
     elif status == "picker":
         items = data.get("picker", [])
         for item in items[:5]:
@@ -125,11 +131,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     urls = URL_REGEX.findall(message.text)
     for url in urls:
         url_lower = url.lower()
-        
+
         # Decide qual ferramenta usar
         use_ytdlp = any(site in url_lower for site in YTDLP_SITES)
         use_cobalt = any(site in url_lower for site in COBALT_SITES)
-        
+
         if not use_ytdlp and not use_cobalt:
             logger.info(f"Link de site aleatório ignorado: {url}")
             continue
