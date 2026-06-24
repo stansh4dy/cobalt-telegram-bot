@@ -28,8 +28,19 @@ ERRO_MSGS = [
     "*orelhas caídas* 😿 não rolou dessa vez",
 ]
 
+def get_cookie_file():
+    """Cria arquivo de cookies temporário a partir da variável de ambiente, ou usa cookies.txt"""
+    cookie_content = os.environ.get("YOUTUBE_COOKIES")
+    if cookie_content:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w")
+        tmp.write(cookie_content)
+        tmp.close()
+        return tmp.name
+    if os.path.exists("cookies.txt"):
+        return "cookies.txt"
+    return None
+
 def download_generic_file(url):
-    """Baixa arquivos vindos do Cobalt identificando se é foto, vídeo ou áudio"""
     response = requests.get(url, stream=True, timeout=60)
     response.raise_for_status()
     content_type = response.headers.get("content-type", "")
@@ -47,43 +58,52 @@ def download_generic_file(url):
     return tmp.name, content_type
 
 async def process_with_ytdlp(url, message):
-    """Processa links pesados usando yt-dlp"""
     logger.info(f"[yt-dlp] Processando: {url}")
+
+    cookie_file = get_cookie_file()
 
     ydl_opts = {
         'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
-        'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+        # "18" = YouTube formato mp4 360p combinado (vídeo+áudio juntos, sem merge)
+        # Fallback progressivo até qualquer coisa disponível
+        'format': '18/22/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'merge_output_format': 'mp4',
         'max_filesize': 50 * 1024 * 1024,
         'noplaylist': True,
         'quiet': True,
         'no_warnings': True,
-        'cookiefile': 'cookies.txt'
     }
+
+    if cookie_file:
+        ydl_opts['cookiefile'] = cookie_file
 
     if "soundcloud" in url.lower():
         ydl_opts['format'] = 'bestaudio/best'
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = (
-            info['requested_downloads'][0]['filepath']
-            if 'requested_downloads' in info
-            else ydl.prepare_filename(info)
-        )
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = (
+                info['requested_downloads'][0]['filepath']
+                if 'requested_downloads' in info
+                else ydl.prepare_filename(info)
+            )
 
-    with open(filename, "rb") as f:
-        ext = filename.lower().split('.')[-1]
-        if ext in ['mp3', 'm4a', 'wav', 'ogg']:
-            await message.reply_audio(audio=f)
-        elif ext in ['jpg', 'jpeg', 'png', 'webp']:
-            await message.reply_photo(photo=f)
-        else:
-            await message.reply_video(video=f)
-    os.unlink(filename)
+        with open(filename, "rb") as f:
+            ext = filename.lower().split('.')[-1]
+            if ext in ['mp3', 'm4a', 'wav', 'ogg']:
+                await message.reply_audio(audio=f)
+            elif ext in ['jpg', 'jpeg', 'png', 'webp']:
+                await message.reply_photo(photo=f)
+            else:
+                await message.reply_video(video=f)
+        os.unlink(filename)
+    finally:
+        # Limpa cookie temporário se foi criado
+        if cookie_file and cookie_file != "cookies.txt" and os.path.exists(cookie_file):
+            os.unlink(cookie_file)
 
 async def process_with_cobalt(url, message):
-    """Processa redes sociais e fotos usando a API do Cobalt"""
     logger.info(f"[Cobalt] Processando: {url}")
     response = requests.post(
         COBALT_API,
@@ -158,6 +178,6 @@ if __name__ == "__main__":
     logger.info("🐱 Bot gatinho HÍBRIDO rodando...")
     app.run_polling(
         allowed_updates=["message"],
-        drop_pending_updates=True,   # ignora mensagens acumuladas de instâncias antigas
+        drop_pending_updates=True,
         close_loop=False,
     )
