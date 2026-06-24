@@ -1,10 +1,27 @@
-# Configurações de Download do Gatinho
-        ydl_opts = {
-            'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
-            'format': 'best[ext=mp4]/best', 
-            'max_filesize': 50 * 1024 * 1024, 
-            'noplaylist': True,
-            'quiet': True,
-            'no_warnings': True,
-            'cookiefile': 'cookies.txt'  # <-- ESSA É A LINHA NOVA! Mágica contra bloqueios!
-        }
+# Netscape HTTP Cookie File
+# https://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file! Do not edit.
+
+.youtube.com	TRUE	/	TRUE	1797869157	PREF	tz=America.Sao_Paulo&f6=40000000&f7=100&f5=30000
+.youtube.com	TRUE	/	TRUE	1796971572	LOGIN_INFO	AFmmF2swRAIgKS2kAq9Mt0OaVifyI4AlGhHIsxB4Y6UvCBXfDyW8YDECIFS_kCh0sRwVlDcxGv_vA2oJJB1Qyt6C13XULwz_R0GH:QUQ3MjNmeFprTjJpVy12SVRmTE5zQXpfdnE1UUxhdVBPTl9TWDRvai1mQ1NzQUROdmRueS1vaVJtanVCVm1tWEQxUU0tSGI4dHJIaERHTkFSTEMyQ3FRVE1IRUlGby10NEpNX3VZaGJmU1Zmd2o0WmdpY1k4MEVWaXpScExGMTJDNTZaaGVjaDgwWVB5QUxXOTdUbUpOUGlJSkJHcTVVWUdn
+.youtube.com	TRUE	/	FALSE	1797023405	SID	g.a000_AhatSAoGSFqp5uSyngwCZwaYW6_kZWr_uNWEzcjHT9cFno-ZIQgqTyI0NWkNlKGvcGF2QACgYKAZ0SARQSFQHGX2MiyJP2VUOqn0UD_Dw9NDr6IRoVAUF8yKp1MiSAKVIyg1IJ34ttf3t90076
+.youtube.com	TRUE	/	TRUE	1797023405	__Secure-1PSID	g.a000_AhatSAoGSFqp5uSyngwCZwaYW6_kZWr_uNWEzcjHT9cFno-9KdCjhcE8RBGpQ9-MrQqGwACgYKAaQSARQSFQHGX2Mi3r9hYlC2jiahvo5N5WsdSBoVAUF8yKqYz2FwTqw6tLR1lzy_4G7s0076
+.youtube.com	TRUE	/	TRUE	1797023405	__Secure-3PSID	g.a000_AhatSAoGSFqp5uSyngwCZwaYW6_kZWr_uNWEzcjHT9cFno-qS9IqQROeoFaIwyD_SepAAACgYKAXkSARQSFQHGX2MiTp3RoWl-cLTE16aP0wnHjRoVAUF8yKoD8Jlo8Q7_eqfmWHvogMic0076
+.youtube.com	TRUE	/	FALSE	1797023405	HSID	AVndbcO0RZOleRAvQ
+.youtube.com	TRUE	/	TRUE	1797023405	SSID	AwIrQHuzjZNONpI3x
+.youtube.com	TRUE	/	FALSE	1797023405	APISID	s0EQSzxIoRDsvZYw/AHgIQ4q2acYtCka9h
+.youtube.com	TRUE	/	TRUE	1797023405	SAPISID	Qo31TBR9edp8Q1St/AIhutznOlJ-JKMXjf
+.youtube.com	TRUE	/	TRUE	1797023405	__Secure-1PAPISID	Qo31TBR9edp8Q1St/AIhutznOlJ-JKMXjf
+.youtube.com	TRUE	/	TRUE	1797023405	__Secure-3PAPISID	Qo31TBR9edp8Q1St/AIhutznOlJ-JKMXjf
+.youtube.com	TRUE	/	TRUE	0	wide	1
+.youtube.com	TRUE	/	TRUE	1797869153	__Secure-1PSIDTS	sidts-CjQByojQU--bNK7RjARHra4IoC_3U8gOwFh1NehGT-lI8pCZ3f5xJsp8YiTD9qHN8l0lyfkGEAA
+.youtube.com	TRUE	/	TRUE	1797869153	__Secure-3PSIDTS	sidts-CjQByojQU--bNK7RjARHra4IoC_3U8gOwFh1NehGT-lI8pCZ3f5xJsp8YiTD9qHN8l0lyfkGEAA
+.youtube.com	TRUE	/	FALSE	1797869153	SIDCC	AKEyXzVITtv7QOJJ-FhWbajkFlA1juJTrDy2bfOPOM0LaeD8tLGsTNTuk92MGytqQhj_LuF2Pg
+.youtube.com	TRUE	/	TRUE	1797869153	__Secure-1PSIDCC	AKEyXzVwbZ2a65g_VwIkR3gQRmCGYLOrjoqoyxi0_rghrN14FJZaQk35hVBkKFwqHy0BCnFAyg
+.youtube.com	TRUE	/	TRUE	1797869153	__Secure-3PSIDCC	AKEyXzVNAAI6fN6s1Xj1-WUDixGIaRm-K73jGBIhn9QlJECYGFk1EVt1cZAcERPGf2unGOwYBg
+.youtube.com	TRUE	/	FALSE	1782317178	ST-3opvp5	session_logininfo=AFmmF2swRAIgKS2kAq9Mt0OaVifyI4AlGhHIsxB4Y6UvCBXfDyW8YDECIFS_kCh0sRwVlDcxGv_vA2oJJB1Qyt6C13XULwz_R0GH%3AQUQ3MjNmeFprTjJpVy12SVRmTE5zQXpfdnE1UUxhdVBPTl9TWDRvai1mQ1NzQUROdmRueS1vaVJtanVCVm1tWEQxUU0tSGI4dHJIaERHTkFSTEMyQ3FRVE1IRUlGby10NEpNX3VZaGJmU1Zmd2o0WmdpY1k4MEVWaXpScExGMTJDNTZaaGVjaDgwWVB5QUxXOTdUbUpOUGlJSkJHcTVVWUdn
+.youtube.com	TRUE	/	TRUE	1797869142	VISITOR_INFO1_LIVE	N96DDI18Cvc
+.youtube.com	TRUE	/	TRUE	1797869142	VISITOR_PRIVACY_METADATA	CgJCUhIEGgAgNA%3D%3D
+.youtube.com	TRUE	/	TRUE	1797805270	__Secure-YNID	19.YT=tUrgw37HXo-O-hPIl0NW8riYB3e5tlu6n58Icm25K_J92jBmr1qDD9yZDWtS6B_fuaeZ6WtHC9xzA_uWKTNRjXogR7MsukF_l7cf7Ow6LHqIOYauOUjfT9LZ96YGy0bBkSqpQ8u9yZvisZ1dcAvSftYJggvGbKbRpvD-Piw9xVTqQauQngB-SX4A0UGR1UeG2q0Dk9il82rYnY-X_xRkr5EEhsomLB_YCcJ8lMmxffoUbiPiv5Uyt0ZU8pQuXVzOX6YOkJEMwGcc8i3blZV_Jv7atXAC2PPegpPoP6FpLzl8IpAeUUt_rFSWev14XVqAfoeX6lmDusz8yqSAzI1Ktg
+.youtube.com	TRUE	/	TRUE	1797805270	__Secure-ROLLOUT_TOKEN	CKz489bin8v7mAEQvP2uub7wlAMYpqi-6rKelQM%3D
+.youtube.com	TRUE	/	TRUE	0	YSC	ws4gVR_GZZ4
