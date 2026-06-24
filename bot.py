@@ -7,21 +7,21 @@ import tempfile
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 COBALT_API = "https://cobalt-production-ce8d.up.railway.app"
+URL_REGEX = re.compile(r'https?://[^\s]+')
 
-SUPPORTED_DOMAINS = [
-    "instagram.com", "twitter.com", "x.com", "tiktok.com",
-    "reddit.com", "soundcloud.com", "streamable.com", "vimeo.com",
-    "twitch.tv", "tumblr.com", "vk.com", "ok.ru",
-    "bsky.app", "bsky.social", "dailymotion.com", "snapchat.com",
-    "facebook.com", "fb.watch", "youtube.com", "youtu.be"
+# LISTA DE SITES PERMITIDOS - O bot só vai reagir a esses sites!
+SITES_PERMITIDOS = [
+    "instagram.com", "twitter.com", "x.com", "tiktok.com", 
+    "reddit.com", "soundcloud.com", "youtube.com", "youtu.be", "pinterest.com"
 ]
-
-URL_REGEX = re.compile(r'https?://[^\s\]>]+')
 
 ERRO_MSGS = [
     "𝘮𝘪𝘢𝘶... 🐱💔 não consegui baixar esse",
@@ -30,30 +30,27 @@ ERRO_MSGS = [
     "*orelhas caídas* 😿 não rolou dessa vez",
 ]
 
-def is_supported(url):
-    return any(domain in url for domain in SUPPORTED_DOMAINS)
+def is_allowed_url(url):
+    return any(site in url.lower() for site in SITES_PERMITIDOS)
 
 def download_file(url):
     response = requests.get(url, stream=True, timeout=60)
     response.raise_for_status()
+    
     content_type = response.headers.get("content-type", "")
-    suffix = ".mp3" if "audio" in content_type else ".mp4"
+    
+    # Define a extensão correta com base no tipo de arquivo
+    suffix = ".mp4"
+    if "audio" in content_type:
+        suffix = ".mp3"
+    elif "image" in content_type:
+        suffix = ".jpg"
+        
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    size = 0
     for chunk in response.iter_content(chunk_size=8192):
         tmp.write(chunk)
-        size += len(chunk)
     tmp.close()
-    return tmp.name, content_type, size
-
-async def send_media(message, path, content_type, filename):
-    with open(path, "rb") as f:
-        if "audio" in content_type or filename.endswith(".mp3"):
-            await message.reply_audio(audio=f)
-        elif "image" in content_type or filename.endswith((".jpg", ".jpeg", ".png", ".webp")):
-            await message.reply_photo(photo=f)
-        else:
-            await message.reply_video(video=f)
+    return tmp.name, content_type
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -65,67 +62,85 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     for url in urls:
-        if not is_supported(url):
-            logger.info(f"Ignorado (não é rede social): {url}")
+        # Se for um link de site aleatório, ignora
+        if not is_allowed_url(url):
+            logger.info(f"Link ignorado (não é rede social): {url}")
             continue
 
-        logger.info(f"Link recebido: {url}")
+        logger.info(f"Link recebido para processar: {url}")
+        
         try:
             response = requests.post(
                 COBALT_API,
                 json={"url": url},
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
                 timeout=30
             )
             data = response.json()
             status = data.get("status")
-            logger.info(f"Status cobalt: {status}")
+            
+            # Se deu erro lá no Cobalt, vamos registrar O MOTIVO
+            if status == "error":
+                motivo = data.get("text", "Erro desconhecido")
+                logger.error(f"O Cobalt recusou o link. Motivo: {motivo}")
+                await message.reply_text(random.choice(ERRO_MSGS))
+                continue
+
+            logger.info(f"Status Cobalt: {status}")
 
             if status in ("tunnel", "redirect"):
                 file_url = data.get("url")
                 filename = data.get("filename", "")
+                
                 try:
-                    path, content_type, size = download_file(file_url)
-                    if size == 0:
-                        os.unlink(path)
-                        await message.reply_text(random.choice(ERRO_MSGS))
-                        continue
-                    await send_media(message, path, content_type, filename)
-                    os.unlink(path)
-                    logger.info("Enviado com sucesso!")
+                    logger.info("Baixando arquivo do Cobalt...")
+                    path, content_type = download_file(file_url)
+                    logger.info(f"Arquivo baixado: {path} | tipo: {content_type}")
+                    
+                    with open(path, "rb") as f:
+                        if "audio" in content_type or filename.endswith(".mp3"):
+                            await message.reply_audio(audio=f)
+                        elif "image" in content_type or filename.endswith((".jpg", ".png")):
+                            await message.reply_photo(photo=f)
+                        else:
+                            await message.reply_video(video=f)
+                            
+                    os.unlink(path) # Limpa o arquivo temp
+                    logger.info("Mídia enviada com sucesso pro grupo!")
+                    
                 except Exception as e:
-                    logger.error(f"Erro envio: {e}")
+                    logger.error(f"Erro ao baixar/enviar para o Telegram: {e}")
                     await message.reply_text(random.choice(ERRO_MSGS))
-
+                    
             elif status == "picker":
                 items = data.get("picker", [])
-                for item in items[:5]:
+                for item in items[:5]: # Pega no máximo 5 itens de uma galeria
                     try:
-                        path, content_type, size = download_file(item["url"])
-                        if size == 0:
-                            os.unlink(path)
-                            continue
-                        await send_media(message, path, content_type, item.get("url", ""))
+                        path, content_type = download_file(item["url"])
+                        with open(path, "rb") as f:
+                            if "audio" in content_type:
+                                await message.reply_audio(audio=f)
+                            elif "image" in content_type:
+                                await message.reply_photo(photo=f)
+                            else:
+                                await message.reply_video(video=f)
                         os.unlink(path)
                     except Exception as e:
-                        logger.error(f"Erro picker item: {e}")
-
-            elif status == "error":
-                error_code = data.get("error", {}).get("code", "")
-                logger.warning(f"Erro cobalt: {error_code}")
-                if error_code in ("error.api.link.unsupported", "error.api.fetch.fail"):
-                    pass
-                else:
-                    await message.reply_text(random.choice(ERRO_MSGS))
-
+                        logger.error(f"Erro em item do picker: {e}")
+                        
             else:
-                logger.warning(f"Status desconhecido: {data}")
-
+                logger.warning(f"Status inesperado recebido: {data}")
+                await message.reply_text(random.choice(ERRO_MSGS))
+                
         except Exception as e:
-            logger.error(f"Erro geral: {e}")
+            logger.error(f"Erro na requisição ao Cobalt: {e}")
+            await message.reply_text(random.choice(ERRO_MSGS))
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    logger.info("🐱 Bot gatinho rodando...")
+    logger.info("🐱 Bot gatinho rodando e filtrando links...")
     app.run_polling(allowed_updates=["message"])
