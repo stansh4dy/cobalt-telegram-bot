@@ -9,6 +9,15 @@ COBALT_API = "https://cobalt-production-ce8d.up.railway.app"
 
 URL_REGEX = re.compile(r'https?://[^\s]+')
 
+ERRO_MSGS = [
+    "𝘮𝘪𝘢𝘶... 🐱💔 não consegui baixar esse",
+    "𝘮𝘪𝘢𝘶? 🐾 esse aqui me venceu...",
+    "nyaa~ 🙀 esse link tá difícil demais pra mim",
+    "*orelhas caídas* 😿 não rolou dessa vez",
+]
+
+import random
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message or not message.text:
@@ -34,24 +43,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if status == "tunnel" or status == "redirect":
                 file_url = data.get("url")
-                await message.reply_text("⬇️ Baixando mídia...")
-                await message.reply_video(video=file_url)
+                try:
+                    await message.reply_video(video=file_url)
+                except Exception:
+                    try:
+                        await message.reply_audio(audio=file_url)
+                    except Exception:
+                        await message.reply_text(random.choice(ERRO_MSGS))
 
             elif status == "picker":
                 items = data.get("picker", [])
-                await message.reply_text(f"🎬 Encontrei {len(items)} mídias, enviando...")
                 for item in items[:5]:
-                    await message.reply_video(video=item["url"])
+                    try:
+                        await message.reply_video(video=item["url"])
+                    except Exception:
+                        try:
+                            await message.reply_photo(photo=item["url"])
+                        except Exception:
+                            pass
 
             else:
-                error = data.get("error", {}).get("code", "erro desconhecido")
-                await message.reply_text(f"❌ Não consegui baixar: {error}")
+                await message.reply_text(random.choice(ERRO_MSGS))
 
-        except Exception as e:
-            await message.reply_text(f"❌ Erro: {str(e)}")
+        except Exception:
+            await message.reply_text(random.choice(ERRO_MSGS))
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Bot rodando...")
-    app.run_polling()
+    print("🐱 Bot gatinho rodando...")
+    app.run_polling(allowed_updates=["message"])
