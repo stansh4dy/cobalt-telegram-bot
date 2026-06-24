@@ -18,7 +18,6 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 COBALT_API = "https://cobalt-production-ce8d.up.railway.app"
 URL_REGEX = re.compile(r'https?://[^\s]+')
 
-# DIVISÃO DE TAREFAS
 YTDLP_SITES = ["youtube.com", "youtu.be", "soundcloud.com", "reddit.com"]
 COBALT_SITES = ["instagram.com", "twitter.com", "x.com", "tiktok.com", "pinterest.com"]
 
@@ -53,9 +52,7 @@ async def process_with_ytdlp(url, message):
 
     ydl_opts = {
         'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
-        # Procura o melhor vídeo até 720p e junta com o melhor áudio
         'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
-        # Força o formato final a ser MP4 para rodar em qualquer celular
         'merge_output_format': 'mp4',
         'max_filesize': 50 * 1024 * 1024,
         'noplaylist': True,
@@ -132,7 +129,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for url in urls:
         url_lower = url.lower()
 
-        # Decide qual ferramenta usar
         use_ytdlp = any(site in url_lower for site in YTDLP_SITES)
         use_cobalt = any(site in url_lower for site in COBALT_SITES)
 
@@ -151,7 +147,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_text(random.choice(ERRO_MSGS))
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app = (
+        ApplicationBuilder()
+        .token(TELEGRAM_TOKEN)
+        .connect_timeout(30)
+        .read_timeout(30)
+        .build()
+    )
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("🐱 Bot gatinho HÍBRIDO rodando...")
-    app.run_polling(allowed_updates=["message"])
+    app.run_polling(
+        allowed_updates=["message"],
+        drop_pending_updates=True,   # ignora mensagens acumuladas de instâncias antigas
+        close_loop=False,
+    )
