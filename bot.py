@@ -3,6 +3,7 @@ import re
 import requests
 import random
 import logging
+import tempfile
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
@@ -23,6 +24,18 @@ ERRO_MSGS = [
     "nyaa~ 🙀 esse link tá difícil demais pra mim",
     "*orelhas caídas* 😿 não rolou dessa vez",
 ]
+
+def download_file(url):
+    response = requests.get(url, stream=True, timeout=60)
+    response.raise_for_status()
+    suffix = ".mp4"
+    if "audio" in response.headers.get("content-type", ""):
+        suffix = ".mp3"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    for chunk in response.iter_content(chunk_size=8192):
+        tmp.write(chunk)
+    tmp.close()
+    return tmp.name, response.headers.get("content-type", "")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -47,35 +60,42 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             data = response.json()
             status = data.get("status")
-            logger.info(f"Resposta cobalt: {data}")
+            logger.info(f"Resposta cobalt: {status}")
 
-            if status == "tunnel" or status == "redirect":
+            if status in ("tunnel", "redirect"):
                 file_url = data.get("url")
+                filename = data.get("filename", "")
                 try:
-                    await message.reply_video(video=file_url)
-                    logger.info("Vídeo enviado com sucesso")
+                    logger.info("Baixando arquivo...")
+                    path, content_type = download_file(file_url)
+                    logger.info(f"Arquivo baixado: {path} | tipo: {content_type}")
+                    with open(path, "rb") as f:
+                        if "audio" in content_type or filename.endswith(".mp3"):
+                            await message.reply_audio(audio=f)
+                        else:
+                            await message.reply_video(video=f)
+                    os.unlink(path)
+                    logger.info("Enviado com sucesso!")
                 except Exception as e:
-                    logger.info(f"Não é vídeo, tentando áudio: {e}")
-                    try:
-                        await message.reply_audio(audio=file_url)
-                        logger.info("Áudio enviado com sucesso")
-                    except Exception as e2:
-                        logger.error(f"Falhou envio: {e2}")
-                        await message.reply_text(random.choice(ERRO_MSGS))
+                    logger.error(f"Erro no envio: {e}")
+                    await message.reply_text(random.choice(ERRO_MSGS))
 
             elif status == "picker":
                 items = data.get("picker", [])
                 for item in items[:5]:
                     try:
-                        await message.reply_video(video=item["url"])
-                    except Exception:
-                        try:
-                            await message.reply_photo(photo=item["url"])
-                        except Exception:
-                            pass
+                        path, content_type = download_file(item["url"])
+                        with open(path, "rb") as f:
+                            if "audio" in content_type:
+                                await message.reply_audio(audio=f)
+                            else:
+                                await message.reply_video(video=f)
+                        os.unlink(path)
+                    except Exception as e:
+                        logger.error(f"Erro picker: {e}")
 
             else:
-                logger.warning(f"Status inesperado: {status} | Data: {data}")
+                logger.warning(f"Status inesperado: {data}")
                 await message.reply_text(random.choice(ERRO_MSGS))
 
         except Exception as e:
