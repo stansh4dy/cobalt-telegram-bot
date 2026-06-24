@@ -54,7 +54,7 @@ async def process_with_ytdlp(url, message):
     ydl_opts = {
         'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
         # Procura o melhor vídeo até 720p e junta com o melhor áudio
-        'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+        'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
         # Força o formato final a ser MP4 para rodar em qualquer celular
         'merge_output_format': 'mp4',
         'max_filesize': 50 * 1024 * 1024,
