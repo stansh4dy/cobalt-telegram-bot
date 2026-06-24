@@ -1,0 +1,10 @@
+# Configurações de Download do Gatinho
+        ydl_opts = {
+            'outtmpl': os.path.join(tempfile.gettempdir(), 'gatinho_%(id)s.%(ext)s'),
+            'format': 'best[ext=mp4]/best', 
+            'max_filesize': 50 * 1024 * 1024, 
+            'noplaylist': True,
+            'quiet': True,
+            'no_warnings': True,
+            'cookiefile': 'cookies.txt'  # <-- ESSA É A LINHA NOVA! Mágica contra bloqueios!
+        }
