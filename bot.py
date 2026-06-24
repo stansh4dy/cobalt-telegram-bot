@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-COBALT_API = "https://api.cobalt.tools"
+COBALT_API = "https://cobalt.imput.net"
 
 URL_REGEX = re.compile(r'https?://[^\s]+')
 
